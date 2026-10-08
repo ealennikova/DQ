@@ -1,0 +1,221 @@
+﻿version: "1.0"
+
+domain: "IoT / wearable activity and sleep data"
+
+owner:
+  function: "Data Quality / Data Governance"
+
+source:
+  type: "wearable device data"
+  format: "CSV"
+  frequency: "daily"
+
+business_key:
+  - id
+  - activity_day
+
+schema:
+  - name: id
+    type: bigint
+    nullable: false
+    description: "Идентификатор пользователя"
+    dq_rules:
+      - DQ-01
+      - DQ-03
+
+  - name: activity_day
+    type: date
+    nullable: false
+    description: "Дата наблюдения"
+    dq_rules:
+      - DQ-02
+      - DQ-03
+
+  - name: calories
+    type: numeric
+    nullable: false
+    description: "Количество израсходованных калорий"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+
+  - name: minutes_instances
+    type: integer
+    nullable: false
+    description: "Количество минут наблюдения за сутки"
+    constraints:
+      min: 0
+      max: 1440
+    dq_rules:
+      - DQ-04
+      - DQ-05
+      - DQ-06
+      - DQ-07
+
+  - name: sedentary_minutes
+    type: integer
+    nullable: false
+    description: "Минуты малоподвижной активности"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-05
+
+  - name: light_active_minutes
+    type: integer
+    nullable: false
+    description: "Минуты лёгкой активности"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-05
+
+  - name: moderately_active_minutes
+    type: integer
+    nullable: false
+    description: "Минуты умеренной активности"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-05
+
+  - name: very_active_minutes
+    type: integer
+    nullable: false
+    description: "Минуты высокой активности"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-05
+
+  - name: steps
+    type: integer
+    nullable: false
+    description: "Количество шагов"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+
+  - name: total_minutes_asleep
+    type: integer
+    nullable: false
+    description: "Общее время сна в минутах"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-08
+      - DQ-09
+
+  - name: half_dream
+    type: integer
+    nullable: false
+    description: "Количество записей/интервалов, связанных со сном"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-09
+
+  - name: minutes_in_bed
+    type: integer
+    nullable: false
+    description: "Время нахождения в постели в минутах"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+
+  - name: sleeps_instances
+    type: integer
+    nullable: false
+    description: "Количество эпизодов сна"
+    constraints:
+      min: 0
+    dq_rules:
+      - DQ-04
+      - DQ-08
+
+quality_requirements:
+
+  completeness:
+    - rule_id: DQ-01
+      metric: "Id заполнен"
+      threshold: "100%"
+
+    - rule_id: DQ-07
+      metric: "Полное суточное покрытие"
+      threshold: "100%"
+      severity: "Warning"
+
+    - rule_id: DQ-09
+      metric: "При наличии времени сна заполнено поле HalfDream"
+      threshold: "100%"
+      severity: "Warning"
+
+  uniqueness:
+    - rule_id: DQ-03
+      metric: "Уникальность Id + ActivityDay"
+      threshold: "100%"
+      severity: "Critical"
+
+  validity:
+    - rule_id: DQ-02
+      metric: "Корректная дата ActivityDay"
+      threshold: "100%"
+      severity: "Critical"
+
+    - rule_id: DQ-04
+      metric: "Числовые значения неотрицательны"
+      threshold: "100%"
+      severity: "Critical"
+
+    - rule_id: DQ-06
+      metric: "minutes_instances <= 1440"
+      threshold: "100%"
+      severity: "Critical"
+
+  consistency:
+    - rule_id: DQ-05
+      metric: "Сумма activity minutes равна minutes_instances"
+      threshold: "100%"
+      severity: "Critical"
+
+    - rule_id: DQ-08
+      metric: "SleepsInstances > 0 implies TotalMinutesAsleep > 0"
+      threshold: "100%"
+      severity: "Warning"
+
+dq_policy:
+  critical:
+    rules:
+      - DQ-01
+      - DQ-02
+      - DQ-03
+      - DQ-04
+      - DQ-05
+      - DQ-06
+    action: "Reject, quarantine or investigate before downstream processing"
+
+  warning:
+    rules:
+      - DQ-07
+      - DQ-08
+      - DQ-09
+    action: "Load data, flag quality issue and monitor"
+
+data_governance:
+  source_priority: "Must be defined when multiple sources contain the same business key"
+  conflict_resolution: "Must be defined before downstream use"
+  lineage: "Source information should be retained"
+  monitoring: "DQ checks should run after source integration"
+
+privacy_note:
+  applicability_152_fz: "If Id directly or indirectly identifies a natural person, the data may fall under the requirements of Federal Law 152-FZ."
+  note: "DQ controls reduce data-quality and operational risks but do not by themselves ensure compliance with 152-FZ."

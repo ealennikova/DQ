@@ -1,0 +1,92 @@
+checks for activity_data:
+
+  # DQ-01 — Id не должен быть NULL
+  - missing_count(id) = 0:
+      name: "DQ-01 Id is not null"
+
+  # DQ-02 — activity_day не должен быть NULL
+  # В БД поле имеет тип DATE
+  - missing_count(activity_day) = 0:
+      name: "DQ-02 ActivityDay is valid date"
+
+  # DQ-03 — все строки с повторяющимся бизнес-ключом
+  - duplicate_business_key_rows = 0:
+      name: "DQ-03 Id + ActivityDay is unique"
+      duplicate_business_key_rows query: |
+        SELECT COUNT(*)
+        FROM (
+          SELECT
+            id,
+            activity_day,
+            COUNT(*) OVER (
+              PARTITION BY id, activity_day
+            ) AS cnt
+          FROM activity_data
+        ) t
+        WHERE cnt > 1
+
+  # DQ-04 — числовые значения не должны быть отрицательными
+  - negative_values = 0:
+      name: "DQ-04 Numeric values are non-negative"
+      negative_values query: |
+        SELECT COUNT(*)
+        FROM activity_data
+        WHERE calories < 0
+           OR minutes_instances < 0
+           OR sedentary_minutes < 0
+           OR light_active_minutes < 0
+           OR moderately_active_minutes < 0
+           OR very_active_minutes < 0
+           OR steps < 0
+           OR total_minutes_asleep < 0
+           OR half_dream < 0
+           OR minutes_in_bed < 0
+           OR sleeps_instances < 0
+
+  # DQ-05 — сумма активностей должна совпадать
+  # с количеством наблюдаемых минут
+  - activity_minutes_consistency = 0:
+      name: "DQ-05 Activity minutes sum equals minutes_instances"
+      activity_minutes_consistency query: |
+        SELECT COUNT(*)
+        FROM activity_data
+        WHERE sedentary_minutes
+            + light_active_minutes
+            + moderately_active_minutes
+            + very_active_minutes
+            <> minutes_instances
+
+  # DQ-06 — максимум 1440 минут в сутках
+  - minutes_limit = 0:
+      name: "DQ-06 minutes_instances <= 1440"
+      minutes_limit query: |
+        SELECT COUNT(*)
+        FROM activity_data
+        WHERE minutes_instances > 1440
+
+  # DQ-07 — полное покрытие суток
+  - full_day_coverage = 0:
+      name: "DQ-07 Full daily observation coverage"
+      full_day_coverage query: |
+        SELECT COUNT(*)
+        FROM activity_data
+        WHERE minutes_instances <> 1440
+
+  # DQ-08 — если есть SleepsInstances,
+  # должно быть TotalMinutesAsleep > 0
+  - sleep_consistency = 0:
+      name: "DQ-08 SleepsInstances implies TotalMinutesAsleep"
+      sleep_consistency query: |
+        SELECT COUNT(*)
+        FROM activity_data
+        WHERE sleeps_instances > 0
+          AND total_minutes_asleep <= 0
+
+  # DQ-09 — если есть сон, должен быть HalfDream > 0
+  - sleep_completeness = 0:
+      name: "DQ-09 TotalMinutesAsleep implies HalfDream"
+      sleep_completeness query: |
+        SELECT COUNT(*)
+        FROM activity_data
+        WHERE total_minutes_asleep > 0
+          AND half_dream <= 0

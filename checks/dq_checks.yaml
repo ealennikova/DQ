@@ -1,0 +1,105 @@
+dataset:
+  name: activity_data
+  description: "Combined IoT wearable activity and sleep data"
+
+checks:
+
+  - rule_id: DQ-01
+    dimension: Completeness
+    severity: Critical
+    description: "Id must not be null"
+    check_type: not_null
+    column: id
+    expected: 0
+
+  - rule_id: DQ-02
+    dimension: Validity
+    severity: Critical
+    description: "ActivityDay must be a valid date"
+    check_type: valid_date
+    column: activity_day
+    expected: 0
+
+  - rule_id: DQ-03
+    dimension: Uniqueness
+    severity: Critical
+    description: "Id + ActivityDay must be unique"
+    check_type: unique_combination
+    columns:
+      - id
+      - activity_day
+    expected: 0
+
+  - rule_id: DQ-04
+    dimension: Validity
+    severity: Critical
+    description: "Numeric values must be non-negative"
+    check_type: min_value
+    columns:
+      - calories
+      - minutes_instances
+      - sedentary_minutes
+      - light_active_minutes
+      - moderately_active_minutes
+      - very_active_minutes
+      - steps
+      - total_minutes_asleep
+      - half_dream
+      - minutes_in_bed
+      - sleeps_instances
+    min_value: 0
+    expected: 0
+
+  - rule_id: DQ-05
+    dimension: Consistency
+    severity: Critical
+    description: >
+      Activity minutes must equal minutes_instances
+    check_type: expression
+    expression: >
+      sedentary_minutes
+      + light_active_minutes
+      + moderately_active_minutes
+      + very_active_minutes
+      = minutes_instances
+    expected: 0
+
+  - rule_id: DQ-06
+    dimension: Validity
+    severity: Critical
+    description: "minutes_instances must not exceed 1440"
+    check_type: max_value
+    column: minutes_instances
+    max_value: 1440
+    expected: 0
+
+  - rule_id: DQ-07
+    dimension: Completeness
+    severity: Warning
+    description: "Full daily observation coverage"
+    check_type: min_value
+    column: minutes_instances
+    min_value: 1440
+    expected: 0
+
+  - rule_id: DQ-08
+    dimension: Consistency
+    severity: Warning
+    description: >
+      SleepsInstances > 0 implies TotalMinutesAsleep > 0
+    check_type: expression
+    expression: >
+      sleeps_instances = 0
+      OR total_minutes_asleep > 0
+    expected: 0
+
+  - rule_id: DQ-09
+    dimension: Completeness
+    severity: Warning
+    description: >
+      TotalMinutesAsleep > 0 implies HalfDream > 0
+    check_type: expression
+    expression: >
+      total_minutes_asleep = 0
+      OR half_dream > 0
+    expected: 0

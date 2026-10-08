@@ -1,0 +1,8 @@
+﻿data_source postgres_dev:
+  type: postgres
+  connection:
+    host: postgres_dev
+    port: 5432
+    username: demo
+    password: demo
+    database: test
